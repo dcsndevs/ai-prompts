@@ -10,21 +10,35 @@ const UpdatePrompt = () => {
   const searchParams = useSearchParams();
   const promptId = searchParams.get("id");
 
-  const [post, setPost] = useState({ prompt: "", tag: "", });
+  const [post, setPost] = useState({ prompt: "", tag: "" });
+  const [loading, setLoading] = useState(true); // Loading state
   const [submitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const getPromptDetails = async () => {
-      const response = await fetch(`/api/prompt/${promptId}`);
-      const data = await response.json();
-
-      setPost({
-        prompt: data.prompt,
-        tag: data.tag,
-      });
+      try {
+        const response = await fetch(`/api/prompt/${promptId}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch prompt details");
+        }
+        const data = await response.json();
+        setPost({
+          prompt: data.prompt,
+          tag: data.tag,
+        });
+      } catch (error) {
+        console.error(error);
+        alert("Failed to load prompt details");
+      } finally {
+        setLoading(false); // Stop loading
+      }
     };
 
-    if (promptId) getPromptDetails();
+    if (promptId) {
+      getPromptDetails();
+    } else {
+      setLoading(false); // Stop loading if no promptId
+    }
   }, [promptId]);
 
   const updatePrompt = async (e) => {
@@ -36,6 +50,9 @@ const UpdatePrompt = () => {
     try {
       const response = await fetch(`/api/prompt/${promptId}`, {
         method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           prompt: post.prompt,
           tag: post.tag,
@@ -44,17 +61,26 @@ const UpdatePrompt = () => {
 
       if (response.ok) {
         router.push("/");
+      } else {
+        const error = await response.json();
+        console.error('Error updating prompt:', error);
+        alert("Failed to update prompt");
       }
     } catch (error) {
       console.log(error);
+      alert("An error occurred while updating the prompt");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (loading) {
+    return <p>Loading...</p>; // Simple loading state
+  }
+
   return (
     <Form
-      type='Edit'
+      type="Edit"
       post={post}
       setPost={setPost}
       submitting={submitting}
